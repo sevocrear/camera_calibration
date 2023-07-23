@@ -28,7 +28,7 @@ python3 camera_undistort.py --input_image (path to image) --yaml_file (path to c
 Calcule camera's extrinsics using chessboard as a reference frame.
 
 ```bash
-python3 camera_calibration/find_chess_board_calc_T_R.py calibration_images/image.png data/chessboard_calibration.yml data/ 8 9 0.021
+python3 camera_extrinsics.py --input_image (input image path) --yaml_file (calibration file path) --width (width of the chessboard in squares) --height (height of chessboard in squares) --square_size (square size in meters)
 ```
 
 You can also project 2D points to 3D using chessboard as a reference frame.
