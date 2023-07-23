@@ -1,0 +1,6 @@
+click==8.1.6
+matplotlib==3.7.2
+numpy==1.25.1
+opencv_contrib_python==4.8.0.74
+opencv_python==4.8.0.74
+Shapely==2.0.1
