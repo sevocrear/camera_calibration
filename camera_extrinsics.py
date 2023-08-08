@@ -92,12 +92,14 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
     trans_cam_ground = -np.dot(R.T,translation_vector.reshape(3,1)) # cam -> ground
     eulers = rotationMatrixToEulerAngles(rot_mat_cam_ground)
     
-    # DEBUG ---- Some shifts (to make it more accurate)
+    # DEBUG ---- Adjust Some shifts (to manually make it more accurate).
     eulers[2] -= np.pi/2
     trans_cam_ground[2] = - trans_cam_ground[2]
-    # eulers[0] = -1.57
-    # eulers[1] = 0
-    # trans_cam_ground[2] = 1.37
+    eulers[0] = -1.57
+    eulers[1] = 0.03
+    trans_cam_ground[1] = -0.151
+    trans_cam_ground[0] = -0.7
+    trans_cam_ground[2] = 1.351
     rot_mat_cam_ground  = euler_to_rot_mat(eulers)
     R = rot_mat_cam_ground.T
     P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
