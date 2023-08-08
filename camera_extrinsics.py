@@ -95,8 +95,9 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
     # DEBUG ---- Some shifts (to make it more accurate)
     eulers[2] -= np.pi/2
     trans_cam_ground[2] = - trans_cam_ground[2]
-    # eulers[0] -= 0.05
-    #trans_cam_ground[2] = 1.37
+    # eulers[0] = -1.57
+    # eulers[1] = 0
+    # trans_cam_ground[2] = 1.37
     rot_mat_cam_ground  = euler_to_rot_mat(eulers)
     R = rot_mat_cam_ground.T
     P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
