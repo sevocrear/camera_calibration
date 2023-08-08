@@ -44,6 +44,9 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
             pts_3d /= pts_3d[2]
             print("IPM with homography:")
             print(f"2D point {pts_2d[0:2].ravel()} (px) on the image with respect to the chess = {pts_3d[0:2].ravel()} (m)")
+            
+            p3D = calc_xy_via_homography([x,y], rot_mat_cam_ground, trans_cam_ground, mtx)
+            print(f"2D point {pts_2d[0:2].ravel()} (px) on the image with respect to the world frame = {p3D.ravel()} (m)")
     CHECKERBOARD = (width, height) # width, height
     mtx, new_mtx, dist, roi, _, _ = load_coefficients(yaml_file)
     
@@ -70,7 +73,7 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
         # Find the rotation and translation vectors.
         ret, rotation_vector, translation_vector = cv2.solvePnP(board_3d, board_2d, mtx, dist)
         
-        axis = np.float32([[square_size*3,0,0], [0,square_size*3,0], [0,0,-square_size*3]]).reshape(-1,3)
+        axis = np.float32([[square_size*5,0,0], [0,square_size*4,0], [0,0,-square_size*3]]).reshape(-1,3)
         # project 3D points to image plane
         imgpts, _ = cv2.projectPoints(axis, rotation_vector, translation_vector, mtx, dist)
         img = draw(img, board_2d,imgpts)
@@ -89,16 +92,17 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
     print(f'Projection matrix:\n{P}')
     
     # transformation cam -> chessboard (-> measn wrt):
-    rot_mat_cam_grount = R.T # R is ground -> cam
+    rot_mat_cam_ground = R.T # R is ground -> cam
     trans_cam_ground = -np.dot(R.T,translation_vector.reshape(3,1)) # cam -> ground
-    
+    print(f"trans world -> cam: \n{trans_cam_ground}")
+    print(f"rot world -> cam: \n{rot_mat_cam_ground}")
     # Homography Matrix
     hom_mat = np.array([P[0,0], P[0,1], P[0,3], P[1,0], P[1,1], P[1, 3], P[2, 0], P[2,1 ], P[2, 3]]).reshape(3,3)
     print("Homography matrix:\n", hom_mat)
 
     hom_mat_inv = np.linalg.inv(hom_mat)
 
-    save_coefficients(mtx, new_mtx, roi, dist, os.path.join(out_yaml_dir, out_yaml_file), rot_mtx= rot_mat_cam_grount, trans_vect= trans_cam_ground)
+    save_coefficients(mtx, new_mtx, roi, dist, os.path.join(out_yaml_dir, out_yaml_file), rot_mtx= rot_mat_cam_ground, trans_vect= trans_cam_ground)
     
     cv2.setMouseCallback(window_name,select_pt)
     while(1):
@@ -106,6 +110,32 @@ def main(input_image, yaml_file, width, height, square_size, out_yaml_dir, out_y
         k = cv2.waitKey(20) & 0xFF
         if k == 27:
             break
+
+def calc_xy_via_homography(pixel, rot_mat, trans, mtx):
+    '''
+    Project 2D pixel point to 3D onto the given reference frame (ground)
+    '''
+    u, v = pixel
+    # calculate transformation of the camera optical frame wrt reference frame
+    R = rot_mat[:3, :3]
+    translation_vector = np.array([0,0, trans.ravel()[2]])
     
+    # calculate it's inverse
+    t_ref_opt = np.eye(4)
+    t_ref_opt[:3, :3] = R.T
+    t_ref_opt[:3, 3] = -R.T @ translation_vector
+    
+    # Get projection matrix
+    P = mtx @ np.column_stack((R.T, -R.T @ translation_vector))
+    # Homography Matrix
+    hom_mat = np.array([P[0,0], P[0,1], P[0,3], P[1,0], P[1,1], P[1, 3], P[2, 0], P[2,1 ], P[2, 3]]).reshape(3,3)
+    hom_mat_inv = np.linalg.inv(hom_mat)
+    # TRY INVERSE PROJECTION MAPPRING 
+    pts_2d = np.array([[u, v, 1]]).reshape(3,1)
+    pts_3d = hom_mat_inv @ pts_2d
+    pts_3d /= pts_3d[2]
+    xy = pts_3d.ravel() #x, y
+    return xy
+
 if __name__ == "__main__":
     main()

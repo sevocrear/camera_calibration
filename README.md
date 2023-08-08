@@ -4,7 +4,7 @@ You can get both intrinsics and extrinsics of your camera.
 # 1. getting images from the video (camera)
 If you already have directory with images, you can pass this step
 ```bash
-python3 get_images.py --video (video path, camera) --image_dir (path for saved images) --sleep_time (sleep time btw taking images)
+python3 get_images.py --input (video path, camera) --input_type video --image_dir (path for saved images) --sleep_time (sleep time btw taking images)
 ```
 
 # 2. camera calibration (camera_calibrate.py)
