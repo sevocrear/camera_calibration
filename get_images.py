@@ -5,9 +5,10 @@ import time
 import os
 from glob import glob
 
+
 def save_img(frame, image_dir, idx):
     # Save image
-    idx_file =  len(glob(os.path.join(image_dir, "*.png")))
+    idx_file = len(glob(os.path.join(image_dir, "*.png")))
     cv2.imwrite(os.path.join(image_dir, f"{idx_file}.png"), frame)
     idx += 1
     print(f"image {idx_file} saved")
