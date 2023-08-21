@@ -113,32 +113,29 @@ def main(
             axis, rotation_vector, translation_vector, mtx, dist
         )
         img = draw(img, board_2d, imgpts)
+        
+        rotation_mat = np.zeros(shape=(3, 3))
+        R = cv2.Rodrigues(rotation_vector, rotation_mat)[0]
+        P = mtx @ np.column_stack((R, translation_vector))
+
+        # transformation cam -> chessboard (-> measn wrt):
+        rot_mat_cam_ground = R.T  # R is ground -> cam
+        trans_cam_ground = -np.dot(R.T, translation_vector.reshape(3, 1))  # cam -> ground
+        eulers = rotationMatrixToEulerAngles(rot_mat_cam_ground)
     else:
         print("Chessboard not found")
         # TODO: add manual selection of the object points
-        return
 
-    rotation_mat = np.zeros(shape=(3, 3))
-    R = cv2.Rodrigues(rotation_vector, rotation_mat)[0]
-    P = mtx @ np.column_stack((R, translation_vector))
+        turns_opt = [-np.pi/2, 0, -np.pi/2]
+        # DEBUG ---- Adjust Some shifts (to manually make it more accurate).
+        eulers = [0.01, 0, 0]
+        trans_cam_ground = np.array([0, 0, 1.351]).reshape(3,1)
+        rot_mat_cam_opt = euler_to_rot_mat(eulers)
+        rot_mat_cam_ground = euler_to_rot_mat(turns_opt) @ rot_mat_cam_opt
 
-    # transformation cam -> chessboard (-> measn wrt):
-    rot_mat_cam_ground = R.T  # R is ground -> cam
-    trans_cam_ground = -np.dot(R.T, translation_vector.reshape(3, 1))  # cam -> ground
-    eulers = rotationMatrixToEulerAngles(rot_mat_cam_ground)
-
-    # DEBUG ---- Adjust Some shifts (to manually make it more accurate).
-    eulers[2] = -np.pi / 2
-    trans_cam_ground[2] = -trans_cam_ground[2]
-    eulers[0] = -np.pi / 2
-    eulers[1] = 0.00
-    trans_cam_ground[1] = -0.151
-    trans_cam_ground[0] = -0.7
-    trans_cam_ground[2] = 1.351
-    rot_mat_cam_ground = euler_to_rot_mat(eulers)
-    R = rot_mat_cam_ground.T
-    P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
-    ## ----
+        R = rot_mat_cam_ground.T
+        P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
+        ## ----
 
     # Homography Matrix
     hom_mat = np.array(
@@ -171,7 +168,7 @@ def main(
 
     # --- DEBUG calc horizon pts
     horizon_pts = horizon_estimation.get_horizon_pts(5000, num_pts=20)
-    R = euler_to_rot_mat(eulers)
+    R = rot_mat_cam_ground
     trans = trans_cam_ground
     H = np.hstack([R, trans])
     H = np.vstack([H, np.array([0, 0, 0, 1])])
