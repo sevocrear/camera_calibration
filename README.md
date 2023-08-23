@@ -32,3 +32,5 @@ python3 camera_extrinsics.py --input_image (input image path) --yaml_file (calib
 ```
 
 You can also project 2D points to 3D using chessboard as a reference frame.
+
+![extrinsics](extrinsics.png)

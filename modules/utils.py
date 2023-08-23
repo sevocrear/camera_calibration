@@ -2,7 +2,7 @@ import numpy as np
 import math
 import cv2
 
-def euler_to_rot_mat(eulers) -> np.array:
+def euler_to_rot_mat(eulers, inverse = False) -> np.array:
     """
     Convert euler angles to rotation matrix.
 
@@ -36,7 +36,10 @@ def euler_to_rot_mat(eulers) -> np.array:
         ]
     )
 
-    R = rot_z @ rot_y @ rot_x
+    if not inverse:
+        R = rot_z @ rot_y @ rot_x
+    else:
+        R = rot_x @ rot_y @ rot_z
     return R
 
 # Checks if a matrix is a valid rotation matrix.

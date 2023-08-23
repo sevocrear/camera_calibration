@@ -34,12 +34,13 @@ def draw(img, corners, imgpts):
 
 @click.command()
 @click.option("--input_image", type=str, help="Input image to undistort")
-@click.option("--image_w", default = 1280, type=int, help="Input image width")
-@click.option("--image_h", default = 1080, type=int, help="Input image height")
+@click.option("--image_w", default=1280, type=int, help="Input image width")
+@click.option("--image_h", default=1080, type=int, help="Input image height")
 @click.option("--yaml_file", type=str, help="Path to calibration file")
 @click.option("--width", type=int, help="Width of chessboard in squares")
 @click.option("--height", type=int, help="Height of chessboard in squares")
 @click.option("--square_size", type=float, help="Size of square in meters")
+@click.option("--undistort/--no-undistort", "-u/-n", default=True, help="Undistort image")
 @click.option(
     "--out_yaml_dir", type=str, default="data", help="Path to output calibration file"
 )
@@ -50,7 +51,16 @@ def draw(img, corners, imgpts):
     help="Name of the output calibration file",
 )
 def main(
-    input_image, image_w, image_h, yaml_file, width, height, square_size, out_yaml_dir, out_yaml_file
+    input_image,
+    image_w,
+    image_h,
+    yaml_file,
+    width,
+    height,
+    square_size,
+    out_yaml_dir,
+    out_yaml_file,
+    undistort
 ):
     def select_pt(event, x, y, flags, param):
         global mouseX, mouseY
@@ -76,8 +86,15 @@ def main(
     CHECKERBOARD = (width, height)  # width, height
     mtx, new_mtx, dist, roi, _, _ = load_coefficients(yaml_file)
 
+    # READ IMAGE
     img = cv2.imread(input_image)
     img = cv2.resize(img, (image_w, image_h))
+    # UNDISTORT:  Might perform better on undistorted image
+    if undistort:
+        dst = cv2.undistort(img, mtx, dist, None, new_mtx)
+        img = dst
+        dist = np.zeros((5, 1))
+
     # Определение мировых координат для 3D точек
     board_3d = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
     board_3d[0, :, :2] = (
@@ -97,8 +114,7 @@ def main(
 
     # Find the chessboard corners
     ret, corners = cv2.findChessboardCorners(
-        gray,
-        (CHECKERBOARD[0], CHECKERBOARD[1]),
+        gray, (CHECKERBOARD[0], CHECKERBOARD[1])
     )
     if ret:
         board_2d = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -115,32 +131,43 @@ def main(
             axis, rotation_vector, translation_vector, mtx, dist
         )
         img = draw(img, board_2d, imgpts)
-        
+
         rotation_mat = np.zeros(shape=(3, 3))
         R = cv2.Rodrigues(rotation_vector, rotation_mat)[0]
         P = mtx @ np.column_stack((R, translation_vector))
 
-        # transformation cam -> chessboard (-> measn wrt):
+        # transformation cam -> chessboard (-> means wrt):
         rot_mat_cam_ground = R.T  # R is ground -> cam
-        trans_cam_ground = -np.dot(R.T, translation_vector.reshape(3, 1))  # cam -> ground
+        trans_cam_ground = -np.dot(
+            R.T, translation_vector.reshape(3, 1)
+        )  # cam -> ground
         trans_cam_ground[2] = -trans_cam_ground[2]  # z is inverted
         eulers = rotationMatrixToEulerAngles(rot_mat_cam_ground)
-        
-        eulers[2] -= np.pi / 2  # TODO: why?
-        eulers[0] = - eulers[0]  # TODO: why?
-        rot_mat_cam_ground = euler_to_rot_mat(eulers)
 
+        # eliminate x,y offsets
+        trans_cam_ground[0] = 0
+        trans_cam_ground[1] = 0
+        
+        # Get cam frame -> world rotation
+        rot_mat_cam_ground = euler_to_rot_mat(eulers)
+        turns_opt = [-np.pi / 2, 0, -np.pi / 2]
+        eulers_cam = rotationMatrixToEulerAngles(
+            rot_mat_cam_ground @ euler_to_rot_mat(turns_opt, inverse=True)
+        )
+        eulers_cam[2] = 0 # eliminate yaw-angle
+        # Re-calculate camera optical frame -> world rotation
+        eulers = rotationMatrixToEulerAngles(
+            euler_to_rot_mat(eulers_cam) @ euler_to_rot_mat(turns_opt)
+        )
+        rot_mat_cam_ground = euler_to_rot_mat(eulers)
     else:
         print("Chessboard not found")
-        # TODO: add manual selection of the object points
-
         # DEBUG ---- Adjust Some shifts (to manually make it more accurate).
         eulers = [0.01, 0, 0]
-        trans_cam_ground = np.array([0, 0, 1.351]).reshape(3,1)
+        trans_cam_ground = np.array([0, 0, 1.351]).reshape(3, 1)
         rot_mat_cam_opt = euler_to_rot_mat(eulers)
-        turns_opt = [-np.pi/2, 0, -np.pi/2]
+        turns_opt = [-np.pi / 2, 0, -np.pi / 2]
         rot_mat_cam_ground = euler_to_rot_mat(turns_opt) @ rot_mat_cam_opt
-        print(rotationMatrixToEulerAngles(rot_mat_cam_ground))
         R = rot_mat_cam_ground.T
         P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
         ## ----
@@ -175,7 +202,7 @@ def main(
     cv2.setMouseCallback(window_name, select_pt)
 
     # --- DEBUG calc horizon pts
-    horizon_pts = horizon_estimation.get_horizon_pts(5000, num_pts=20)
+    horizon_pts = horizon_estimation.get_horizon_pts(500, num_pts=20)
     R = rot_mat_cam_ground
     trans = trans_cam_ground
     H = np.hstack([R, trans])
