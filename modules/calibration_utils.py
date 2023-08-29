@@ -10,14 +10,14 @@ def load_coefficients(path, export_R_T=False):
 
     # note we also have to specify the type to retrieve other wise we only get a
     # FileNode object back instead of a matrix
-    camera_matrix = cv_file.getNode("K").mat()
-    new_camera_matrix = cv_file.getNode("K_NEW").mat()
+    camera_matrix = cv_file.getNode("MTX").mat()
+    new_camera_matrix = cv_file.getNode("MTX_NEW").mat()
     roi = cv_file.getNode("ROI").mat().flatten().astype(int)
-    dist_matrix = cv_file.getNode("D").mat()
+    dist_matrix = cv_file.getNode("DIST").mat()
     rotation_matrix = translation_vector = None
     if export_R_T:
-        rotation_matrix = cv_file.getNode("R").mat()
-        translation_vector = cv_file.getNode("T").mat()
+        rotation_matrix = cv_file.getNode("ROT_MTX").mat()
+        translation_vector = cv_file.getNode("TRANS_VECTOR").mat()
     cv_file.release()
     return [
         camera_matrix,
@@ -36,6 +36,7 @@ def save_coefficients(
     dist,
     path,
     rot_mtx=None,
+    eulers=None,
     trans_vect=None,
     resize_x=1,
     resize_y=1,
@@ -46,12 +47,13 @@ def save_coefficients(
     mtx[1] *= resize_y
     newcameramtx[0] *= resize_x
     newcameramtx[1] *= resize_y
-    cv_file.write("K", mtx)
-    cv_file.write("K_NEW", newcameramtx)
+    cv_file.write("MTX", mtx)
+    cv_file.write("MTX_NEW", newcameramtx)
     cv_file.write("ROI", roi)
-    cv_file.write("D", dist)
-    cv_file.write("R", rot_mtx)
-    cv_file.write("T", trans_vect)
+    cv_file.write("DIST", dist)
+    cv_file.write("ROT_MTX", rot_mtx)
+    cv_file.write("EULERS", eulers)
+    cv_file.write("TRANS_VECTOR", trans_vect)
     # note you *release* you don't close() a FileStorage object
     cv_file.release()
 

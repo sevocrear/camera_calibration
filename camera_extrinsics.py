@@ -90,10 +90,11 @@ def main(
     img = cv2.imread(input_image)
     img = cv2.resize(img, (image_w, image_h))
     # UNDISTORT:  Might perform better on undistorted image
+    dist1 = dist
     if undistort:
         dst = cv2.undistort(img, mtx, dist, None, new_mtx)
         img = dst
-        dist = np.zeros((5, 1))
+        dist1 = np.zeros((5, 1))
 
     # Определение мировых координат для 3D точек
     board_3d = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
@@ -120,7 +121,7 @@ def main(
         board_2d = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
         # Find the rotation and translation vectors.
         ret, rotation_vector, translation_vector = cv2.solvePnP(
-            board_3d, board_2d, mtx, dist
+            board_3d, board_2d, mtx, dist1
         )
 
         axis = np.float32(
@@ -128,7 +129,7 @@ def main(
         ).reshape(-1, 3)
         # project 3D points to image plane
         imgpts, _ = cv2.projectPoints(
-            axis, rotation_vector, translation_vector, mtx, dist
+            axis, rotation_vector, translation_vector, mtx, dist1
         )
         img = draw(img, board_2d, imgpts)
 
@@ -196,6 +197,7 @@ def main(
         dist,
         os.path.join(out_yaml_dir, out_yaml_file),
         rot_mtx=rot_mat_cam_ground,
+        eulers=rotationMatrixToEulerAngles(rot_mat_cam_ground),
         trans_vect=trans_cam_ground,
     )
 
@@ -214,8 +216,7 @@ def main(
     cv2.polylines(img, [hor_pts_img.astype(np.int32)], 0, (255, 0, 255), 3)
 
     print(f"trans world -> cam: \n{trans_cam_ground}")
-    print(f"eulers world -> cam: \n{eulers}")
-    print(mtx)
+    print(f"eulers world -> cam: \n{rotationMatrixToEulerAngles(rot_mat_cam_ground)}")
     while 1:
         cv2.imshow(window_name, img)
         k = cv2.waitKey(20) & 0xFF
