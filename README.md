@@ -11,7 +11,7 @@ python3 get_images.py --input (video path, camera) --input_type video --image_di
 
 Use example:
 ```bash
-python3 camera_calibrate.py --imagess_dir (path where images are stored) --dir_path (path where to store calibration yaml) --width (board width in squares) --height (board heaight in squares) --square_size (square size (in meters)) 
+python3 camera_calibrate.py --images_dir (path where images are stored) --dir_path (path where to store calibration yaml) --width (board width in squares) --height (board heaight in squares) --square_size (square size (in meters)) 
 ```
 
 It will do the calibration and save the calibration file which consists of intrinsics of the camera in the given directory
@@ -21,7 +21,7 @@ It will do the calibration and save the calibration file which consists of intri
 You can verify the correctness of the calculated intrinsics of the camera. It shows both original and undistorted images
 
 ```bash
-python3 camera_undistort.py --input_image (path to image) --yaml_file (path to calibration file)
+python3 camera_undistort.py --input (path to image/video) --yaml_file (path to calibration file)
 ```
 
 # 4. Extrinsics Calculation
