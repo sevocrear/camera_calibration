@@ -88,7 +88,8 @@ def main(
 
     # READ IMAGE
     img = cv2.imread(input_image)
-    img = cv2.resize(img, (image_w, image_h))
+    # # img = cv2.resize(img, (image_w, image_h))
+    # image_h, image_w, _ = img.shape
     # UNDISTORT:  Might perform better on undistorted image
     dist1 = dist
     if undistort:
@@ -164,11 +165,9 @@ def main(
     else:
         print("Chessboard not found")
         # DEBUG ---- Adjust Some shifts (to manually make it more accurate).
-        eulers = [0.01, 0, 0]
-        trans_cam_ground = np.array([0, 0, 1.351]).reshape(3, 1)
-        rot_mat_cam_opt = euler_to_rot_mat(eulers)
-        turns_opt = [-np.pi / 2, 0, -np.pi / 2]
-        rot_mat_cam_ground = euler_to_rot_mat(turns_opt) @ rot_mat_cam_opt
+        trans_cam_ground[2] = 1.351
+        eulers = [-1.56079633,  0.003,      -1.57079633]
+        rot_mat_cam_ground = euler_to_rot_mat(eulers)
         R = rot_mat_cam_ground.T
         P = mtx @ np.column_stack((R, -R @ trans_cam_ground))
         ## ----
